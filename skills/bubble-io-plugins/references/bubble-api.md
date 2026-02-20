@@ -11,8 +11,9 @@ Complete reference for the `instance`, `properties`, and `context` objects avail
 3. [The `context` Object](#3-the-context-object)
 4. [BubbleThing Interface (v4)](#4-bubblething-interface-v4)
 5. [BubbleList Interface (v4)](#5-bubblelist-interface-v4)
-6. [Plugin API v4 Migration](#6-plugin-api-v4-migration)
-7. [Availability Matrix](#7-availability-matrix)
+6. [Custom Data Types (API Connector)](#6-custom-data-types-api-connector)
+7. [Plugin API v4 Migration](#7-plugin-api-v4-migration)
+8. [Availability Matrix](#8-availability-matrix)
 
 ---
 
@@ -291,7 +292,184 @@ for await (const item of list) {
 
 ---
 
-## 6. Plugin API v4 Migration
+## 6. Custom Data Types (API Connector)
+
+When a plugin defines a custom data type via its own API Connector and exposes it through an element or action field of type **App Type**, Bubble wraps the value in a BubbleThing-like structure. It is **not** plain JSON and cannot be used directly as a JavaScript object.
+
+To convert it into a usable object with Bubble-compatible keys, follow a three-step process: **parse**, **flatten**, **prefix**.
+
+### 6.1 When this applies
+
+- The plugin defines a custom data type via its **API Connector** (configured in the Plugin Editor).
+- An element or action field is set to type **App Type** referencing that custom type.
+- The field value arrives in `properties` as a Bubble-wrapped object, not a plain JS object or JSON string.
+
+This does **not** apply to:
+- Native Bubble database Things passed as field values (those follow the standard BubbleThing interface in Section 4).
+- Server-side actions — SSA receives plain JSON from API Connector responses directly and does not need this conversion.
+
+### 6.2 The three-step conversion
+
+#### Step 1 — Parse (`parseBubbleObject`)
+
+Recursively convert BubbleThings and BubbleLists into plain JavaScript objects and arrays.
+
+Detection uses **duck-typing** based on method existence and arity:
+- **BubbleList:** `obj.length` is a function with arity 0, and `obj.get` is a function with arity 2. Iterated via `obj.get(0, obj.length())`.
+- **BubbleThing:** `obj.listProperties` is a function with arity 0, and `obj.get` is a function with arity 1. Iterated via `obj.listProperties()` + `obj.get(key)`.
+
+**Do not modify these detection conditions.** They match Bubble's internal object signatures.
+
+#### Step 2 — Flatten (`flattenJson`)
+
+Convert nested objects into flat objects with dot-notation keys:
+
+```
+{ authentication: { api_key: 'sk_123' } }
+→ { 'authentication.api_key': 'sk_123' }
+```
+
+Arrays are **preserved as arrays** at the current key. Items within arrays are individually flattened.
+
+#### Step 3 — Prefix (`addPrefix`)
+
+Prepend `_p_` to every key. This is required because plugin-defined custom types use the `_p_` namespace in Bubble's data binding system.
+
+```
+{ 'authentication.api_key': 'sk_123' }
+→ { '_p_authentication.api_key': 'sk_123' }
+```
+
+### 6.3 Canonical code
+
+All three utility functions must be defined **inline** inside the function body (per code standards — no top-level function declarations).
+
+```javascript
+function(instance, properties, context) {
+  // ── Step 0: Load data FIRST, before any DOM work ──────────────
+  var appTypeField = properties.my_api_type;
+
+  // ── Utility: Parse Bubble object to plain JS ──────────────────
+  var parseBubbleObject = function(obj, currentDepth, maxDepth) {
+    if (currentDepth > maxDepth) return obj;
+    var clone;
+
+    // Detect BubbleList (array-like): length() arity 0, get() arity 2
+    if (
+      obj &&
+      typeof obj.length === 'function' &&
+      obj.length.length === 0 &&
+      typeof obj.get === 'function' &&
+      obj.get.length === 2
+    ) {
+      clone = [];
+      var items = obj.get(0, obj.length());
+      for (var i = 0; i < items.length; i++) {
+        clone.push(parseBubbleObject(items[i], currentDepth + 1, maxDepth));
+      }
+      return clone;
+    }
+
+    // Detect BubbleThing (object-like): listProperties() arity 0, get() arity 1
+    if (
+      obj &&
+      typeof obj.listProperties === 'function' &&
+      obj.listProperties.length === 0 &&
+      typeof obj.get === 'function' &&
+      obj.get.length === 1
+    ) {
+      clone = {};
+      var props = obj.listProperties();
+      for (var j = 0; j < props.length; j++) {
+        clone[props[j]] = parseBubbleObject(obj.get(props[j]), currentDepth + 1, maxDepth);
+      }
+      return clone;
+    }
+
+    return obj;
+  };
+
+  // ── Utility: Flatten nested objects to dot-notation keys ──────
+  var flattenJson = function(obj) {
+    var flattenHelper = function(obj, prefix) {
+      prefix = prefix || '';
+      var flattened = {};
+
+      for (var key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          var newKey = prefix ? prefix + '.' + key : key;
+          if (typeof obj[key] === 'object' && obj[key] !== null) {
+            if (Array.isArray(obj[key])) {
+              flattened[newKey] = obj[key].map(function(item) {
+                return typeof item === 'object' && item !== null
+                  ? flattenHelper(item)
+                  : item;
+              });
+            } else {
+              var nested = flattenHelper(obj[key], newKey);
+              for (var nk in nested) {
+                if (Object.prototype.hasOwnProperty.call(nested, nk)) {
+                  flattened[nk] = nested[nk];
+                }
+              }
+            }
+          } else {
+            flattened[newKey] = obj[key];
+          }
+        }
+      }
+
+      return flattened;
+    };
+    return flattenHelper(obj);
+  };
+
+  // ── Utility: Add _p_ prefix to all keys ───────────────────────
+  var addPrefix = function(json) {
+    var result = {};
+    for (var key in json) {
+      if (Object.prototype.hasOwnProperty.call(json, key)) {
+        var value = json[key];
+        if (Array.isArray(value)) {
+          result['_p_' + key] = value.map(function(item) {
+            return typeof item === 'object' && item !== null
+              ? addPrefix(item)
+              : item;
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          result['_p_' + key] = addPrefix(value);
+        } else {
+          result['_p_' + key] = value;
+        }
+      }
+    }
+    return result;
+  };
+
+  // ── Execute the three-step conversion ─────────────────────────
+  var parsed = parseBubbleObject(appTypeField, 0, Infinity);
+  var flattened = flattenJson(parsed);
+  var prefixed = addPrefix(flattened);
+
+  // ── Publish both states ───────────────────────────────────────
+  instance.publishState('formatted_object', prefixed);              // object — for Bubble data binding
+  instance.publishState('formatted_object_raw', JSON.stringify(parsed));  // string — for debugging / custom parsing
+}
+```
+
+### 6.4 Caveats
+
+1. **Client-side only.** This pattern applies to `update.js` and element actions. Server-side actions receive plain JSON from API Connector responses directly.
+
+2. **`'not ready'` applies.** `parseBubbleObject` calls `.get()` and `.length()` on Bubble objects, which may throw `'not ready'`. Follow the standard rule: perform all data access at the **top** of the function, before any DOM mutations.
+
+3. **Duck-typing is fragile.** The BubbleList/BubbleThing detection in `parseBubbleObject` relies on method existence and arity (`function.length`). Do not rename, wrap, or modify these conditions.
+
+4. **Publish both states.** The object state (`formatted_object`) is what Bubble app developers bind to in their workflows. The string state (`formatted_object_raw`) provides the raw parsed data for debugging or custom parsing. Both should be declared as exposed states in the Plugin Editor.
+
+---
+
+## 7. Plugin API v4 Migration
 
 Plugin API v4 migrates from synchronous Fibers to async/await Promises.
 
@@ -344,7 +522,7 @@ The v4 changes apply **only to server-side actions**. Client-side code (`initial
 
 ---
 
-## 7. Availability Matrix
+## 8. Availability Matrix
 
 What's available where:
 

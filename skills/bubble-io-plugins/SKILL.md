@@ -91,7 +91,7 @@ These are the highest-consequence rules. Violating any of these causes hard-to-d
 | File | Load when... |
 |---|---|
 | [bubble-platform.md](references/bubble-platform.md) | Element lifecycle, DOM/canvas, data loading, headers, preview, events, debugging, hard limits. |
-| [bubble-api.md](references/bubble-api.md) | `instance`, `properties`, `context` API reference. BubbleThing/BubbleList types. Plugin API v4 migration. |
+| [bubble-api.md](references/bubble-api.md) | `instance`, `properties`, `context` API reference. BubbleThing/BubbleList types. Custom data types / API Connector App Types. Plugin API v4 migration. |
 | [actions-guide.md](references/actions-guide.md) | Client vs server actions. When to use which. SSA Node modules, return values, option sets. |
 | [code-standards.md](references/code-standards.md) | ESLint config, syntax rules, security, performance, error handling. |
 | [documentation.md](references/documentation.md) | JSDoc, setup files, marketplace descriptions, field tooltips, changelog, publishing. |
