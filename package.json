@@ -1,0 +1,21 @@
+{
+  "name": "my-bubble-plugin-boilerplate",
+  "version": "1.0.0",
+  "description": "A boilerplate for creating Bubble.io plugins with ESLint for linting and formatting.",
+  "scripts": {
+    "setup:eslint": "npm install --save-dev eslint globals @eslint/js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "keywords": [
+    "bubble",
+    "plugin"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.1",
+    "globals": "^17.3.0"
+  }
+}

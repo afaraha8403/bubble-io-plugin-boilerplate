@@ -1,0 +1,23 @@
+<!-- Element Header: injected only on pages using this element. -->
+<!-- Use idempotent loading to prevent duplicate script injection. -->
+
+<script>
+if (!window.MY_LIB_LOADED) {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.example.com/lib.min.js';
+  s.async = true;
+  s.onload = function() {
+    window.MY_LIB_LOADED = true;
+  };
+  document.head.appendChild(s);
+}
+</script>
+
+<!-- Optional: element-specific styles (prefix all classes) -->
+<!--
+<style>
+.PLUGIN_PREFIX-root {
+  box-sizing: border-box;
+}
+</style>
+-->
