@@ -1,21 +1,28 @@
-// preview.js — runs in the Bubble Editor only.
-// Receives: instance, properties (NO context, NO instance.data).
-// Keep it simple: static placeholder, no API calls, no heavy libraries.
+/**
+ * @description Preview placeholder for the Bubble Editor canvas.
+ *
+ * @param {object} instance   - Bubble editor element instance (canvas only)
+ * @param {object} properties - Current field values from the Bubble editor
+ */
 
-var box = $('<div style="text-align: center; display: flex; align-items: center; justify-content: center;"></div>');
+var box = $('<div></div>');
+box.css({
+  'text-align':       'center',
+  'display':          'flex',
+  'align-items':      'center',
+  'justify-content':  'center',
+  'background-color': '#f0f0f0',
+  'border':           '1px dashed #ccc',
+  'color':            '#666',
+  'font-size':        '14px'
+});
+
 instance.canvas.append(box);
 
-// Size to match the element's dimensions in the editor.
 box.css('height', properties.bubble.height() + 'px');
 box.css('width', properties.bubble.width() + 'px');
-box.css('background-color', '#f0f0f0');
-box.css('border', '1px dashed #ccc');
-box.css('color', '#666');
-box.css('font-size', '14px');
-
 box.text('PLUGIN_PREFIX Element');
 
-// Handle responsive elements.
 if (instance.isResponsive) {
   instance.setHeight(properties.bubble.width());
 }

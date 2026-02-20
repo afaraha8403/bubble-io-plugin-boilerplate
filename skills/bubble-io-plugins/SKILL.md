@@ -62,6 +62,86 @@ Each local file maps 1:1 to a text field in the Bubble Plugin Editor:
 | `server/<name>/server.js` | Server-Side Action code |
 | `styles.css` | Shared/Element Header (wrap in `<style>` tags) |
 
+## Code quality expectations
+
+When generating or editing any code in this project, follow these rules unconditionally.
+
+### Well-formatted, readable code
+
+All code must be **clean, consistently formatted, and easy to scan**. This means:
+
+- **Logical sections separated by blank lines** — group related statements together (data loading, guards, rendering, event binding).
+- **Descriptive variable names** — avoid single-letter or cryptic abbreviations (`container` not `c`, `itemCount` not `ic`).
+- **Consistent indentation** — 2-space indent for all JS; match surrounding code if editing an existing file.
+- **Section banners for `update.js`** — use comment blocks (`// === SECTION ===`) to delimit lifecycle phases (data loading → guard → change detection → cleanup → render).
+- **One concern per function** — extract helpers for any logic longer than ~10 lines; define helpers *inside* the wrapper function to avoid global leaks.
+
+### Inline documentation
+
+Every non-trivial block of code must include an inline comment explaining **why** it exists, not just what it does. Specifically:
+
+- **Data loading** — explain what each `properties.*` field contains and why it is loaded first.
+- **Guards / early returns** — explain the condition being checked and what would happen without the guard.
+- **DOM mutations** — explain the structure being built and any Bubble-specific constraints (e.g., why we use `instance.canvas` instead of `document.body`).
+- **Event listeners** — explain the namespace convention and why previous listeners are removed.
+- **Workarounds** — any Bubble quirk or browser compat hack must have a comment linking to the reason.
+
+### JSDoc comments
+
+All functions (wrappers and helpers) must have JSDoc blocks. Follow the rules in [documentation.md](references/documentation.md) Section 1. Summary:
+
+- **Wrapper functions** (`initialize`, `update`, `preview`, actions) — include a top-level `@description` summarising the function's purpose, followed by `@param` tags for each argument (`instance`, `properties`, `context`).
+- **Helper functions** — `@param`, `@returns`, and a one-line description.
+- **Placement** — JSDoc goes **inside** the wrapper, not above it (the wrapper line is stripped when pasting into Bubble).
+
+Example (initialize wrapper):
+
+```javascript
+let initialize = function(instance, context) {
+  /**
+   * @description One-time setup for the PLUGIN_PREFIX element.
+   * Creates the root DOM container, generates a unique event namespace,
+   * and initialises default exposed states.
+   *
+   * @param {object} instance - Bubble element instance (canvas, data, publishState, etc.)
+   * @param {object} context  - Bubble context (keys, currentUser, etc.)
+   */
+
+  // ... implementation ...
+};
+```
+
+### Debug logging (`verbose_logging`)
+
+**When scaffolding a new element or action from scratch**, ask the user once:
+
+> "Should this component include a `verbose_logging` toggle? This adds a boolean field in the Bubble Plugin Editor that gates all `console.log` output at runtime."
+
+Do **not** ask on edits, reviews, refactors, or bug fixes — only on new scaffolds.
+
+If the user **accepts**:
+
+1. **Add a boolean field** called `verbose_logging` to the element or action configuration in the Bubble Plugin Editor and document it in the relevant setup file.
+2. **Gate all `console.log` calls** behind `properties.verbose_logging`:
+
+```javascript
+if (properties.verbose_logging) {
+  console.log('[PLUGIN_PREFIX] update called', { properties });
+}
+```
+
+3. **Log placement** — add gated log statements at:
+   - Entry point of `update.js`, client actions, and server actions
+   - After data loading completes
+   - Before and after external API calls (server actions)
+4. **`console.error()` in `catch` blocks is always unconditional** — never gate error logging behind the verbose flag.
+5. **`initialize.js`** does not receive `properties` — verbose logging is unavailable. Use a plain `console.log` only for temporary init-time debugging; remove before production.
+6. **`preview.js` and `header.html`** run in the editor only — verbose logging does not apply.
+
+If the user **declines**, omit all `console.log` statements. `console.error()` in `catch` blocks remains unconditionally.
+
+---
+
 ## Critical pitfalls — always keep in mind
 
 These are the highest-consequence rules. Violating any of these causes hard-to-debug failures:

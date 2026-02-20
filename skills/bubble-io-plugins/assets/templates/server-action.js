@@ -1,18 +1,21 @@
-// Server-side action (Plugin API v4): runs on Bubble's Node.js server.
-// Receives: properties, context. NO instance, NO DOM, NO jQuery.
-// Must be async. Use await on .get(), .length(), context.v3.request().
-
 async function(properties, context) {
+  /**
+   * @description Server-side action for PLUGIN_PREFIX.
+   *
+   * @param {object} properties - Action parameter values from the Bubble editor.
+   * @param {object} context    - Bubble server context (keys, v3.request, async)
+   */
 
-  // -- Access plugin API keys --
+  // if (properties.verbose_logging) {
+  //   console.log('[PLUGIN_PREFIX] SSA invoked', { properties });
+  // }
+
   // var apiKey = context.keys['My API Key'];
 
-  // -- Access data (v4: all return Promises) --
-  // var list = properties.my_list;
+  // var list  = properties.my_list;
   // var count = await list.length();
   // var items = await list.get(0, Math.min(count, 50));
 
-  // -- Make external API call (prefer fetch over context.v3.request) --
   // var response = await fetch('https://api.example.com/data', {
   //   method: 'POST',
   //   headers: {
@@ -23,10 +26,10 @@ async function(properties, context) {
   // });
   // var data = await response.json();
 
-  // -- Use Node modules (add to package.json in Plugin Editor) --
-  // var myModule = require('my-module');
+  // if (properties.verbose_logging) {
+  //   console.log('[PLUGIN_PREFIX] API response', { data });
+  // }
 
-  // -- Return data for subsequent workflow actions --
   // return { result_field: data.value };
 
 }
