@@ -43,9 +43,6 @@ project-root/
       header.html          # <head> content: CDN links, external scripts
       actions/             # Element-specific workflow actions
         <action>.js
-  .skill/                  # Skill package (this directory)
-    references/            # Domain-specific rules and API docs
-    assets/templates/      # Starter templates for new elements/actions
   eslint.config.mjs        # ESLint flat config
   package.json             # ESLint scripts and dependencies
   README.md
