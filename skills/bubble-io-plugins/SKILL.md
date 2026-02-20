@@ -1,5 +1,5 @@
 ---
-name: bubble-plugin
+name: bubble-plugins
 description: >
   Bubble.io plugin development rules, API reference, and coding standards.
   Use when working on any task in this repo: writing, reviewing, refactoring, or
